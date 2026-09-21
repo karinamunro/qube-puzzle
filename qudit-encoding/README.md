@@ -34,6 +34,7 @@ See the [MQT Qudits installation documentation](https://mqt.readthedocs.io/proje
 - `perm_matrices_MQT.py`: the R2, U2, and F2 permutation matrices.
 - `images/`: basis-state images, backgrounds, and interface graphics.
 - `requirements.txt`: Python dependencies.
+- `docs/`: screenshots illustrating the game interface.
 
 Keep the image folder and matrix module alongside the game script. Images are resolved relative to the script, so starting it from another directory also works. All image filenames and image references are lowercase.
 
@@ -42,3 +43,21 @@ Keep the image folder and matrix module alongside the game script. Images are re
 Press **Scramble** to begin. The aim is to **Measure** the Qube and collapse it to the solved state marked by the star. Use quantum **R2**, **U2**, and **F2** moves with the step-size slider to combine amplitudes. Classical moves rearrange the basis states without changing their amplitudes.
 
 Open **Help → Keyboard Shortcuts** to see the controls. This version retains the behavior of the supplied MQT program, including its existing warning when a measurement cannot be completed.
+
+## Interface guide
+
+The screenshots below are reused from the qubit version to illustrate the shared controls and layout. The qudit version uses four-digit basis-state labels (for example, `0000` and `1121`) for its 2 × 2 × 3 × 2 encoding, instead of the five-bit labels shown in these screenshots.
+
+<img src="docs/pennylane_instructions.png" alt="Game controls illustrated using the qubit interface" width="60%">
+
+## Example screens
+
+### Windows
+
+Initial and scrambled views of the shared game interface:
+
+<img src="docs/pennylane_initial.png" alt="Initial game view, shown in the qubit version on Windows" width="45.2%"> <img src="docs/pennylane_random.png" alt="Scrambled game view, shown in the qubit version on Windows" width="44.7%">
+
+### Mac
+
+<img src="docs/main_game.png" alt="Game view, shown in the qubit version on Mac" width="45%"> <img src="docs/scramble_game.png" alt="Scrambled game view, shown in the qubit version on Mac" width="45%">
