@@ -21,6 +21,8 @@ import scipy.linalg as spla
 from types import NoneType
 import os
 
+IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cube_images")
+
 qubits = ['w','x','y1','y2','z'] # 5 qubits to represent 24 states: w_2 x_2 y1_2 y2_2 z_2
 state_dict = {
     "00000": [690, 300],    "00001": [640, 390],    "00100": [860, 390],    "00101": [810, 300],    "00110": [690, 480],    "00111": [810, 480],
@@ -215,7 +217,7 @@ def main(Ham=None, measure_option="N", time_step=1):
                     canvas.create_oval(state_dict[cube_state][0]-50, state_dict[cube_state][1]-50,state_dict[cube_state][0]+50, 
                                     state_dict[cube_state][1]+50, fill=colour.Color(hue=hue, saturation=1, luminance = lum),outline="", tags="circle")
 
-    image_path = os.path.join("cube_images", "honeycomb_connections_CMY.png") # os.path.join depends on the operating system
+    image_path = os.path.join(IMAGE_DIR, "honeycomb_connections_CMY.png") # os.path.join depends on the operating system
     background_image = tk.PhotoImage(file=image_path)
     canvas.create_image(750, 400, image=background_image, tags = "Nauru_graph") # Nauru graph
 
@@ -223,7 +225,7 @@ def main(Ham=None, measure_option="N", time_step=1):
     for cube_state in state_dict:
         if state_dict[cube_state][3] >= 1e-3: # Percentage has to be greater than 0.1% (0.001 in dictionary) -> aligns with label now
 
-            im = Image.open(os.path.join("cube_images", f"{cube_state}.PNG"))
+            im = Image.open(os.path.join(IMAGE_DIR, "00000.png" if cube_state == "00000" else f"{cube_state}.PNG"))
             im_resize = im.resize((im.width // 5, im.height // 5)) # This reduces the size without losing quality yay
             alpha_pixels = list(im_resize.getdata()) # Pixels
 
@@ -476,7 +478,7 @@ def pop_up():
     elif option == "Efficient": # Alternative. Press keys right, up and left.
         image = "keyboard_shortcuts_alt.png"
 
-    popup_path = Image.open(os.path.join("cube_images", image))
+    popup_path = Image.open(os.path.join(IMAGE_DIR, image))
     popup_path.thumbnail((960,540)) # Similar to .resize()
     popup_image = ImageTk.PhotoImage(popup_path)
 
@@ -619,12 +621,12 @@ def GUI():
     )
 
     # Nauru graph image
-    image_path = os.path.join("cube_images", "honeycomb_connections_CMY.png")
+    image_path = os.path.join(IMAGE_DIR, "honeycomb_connections_CMY.png")
     background_image = tk.PhotoImage(file=image_path)
     canvas.create_image(750, 400, image=background_image, tags="Nauru_graph")
 
     # Solved state cube image
-    im = Image.open(os.path.join("cube_images", "00000.png"))
+    im = Image.open(os.path.join(IMAGE_DIR, "00000.png"))
     im_resize = im.resize((im.width // 5, im.height // 5))
     current_image = ImageTk.PhotoImage(im_resize)
     canvas.create_image(state_dict["00000"][0],state_dict["00000"][1],image=current_image, tags="current_image")
@@ -633,15 +635,15 @@ def GUI():
     canvas.create_text(state_dict["00000"][0],(state_dict["00000"][1]+60), text="100%", fill="white", font=("Cambria Math",12,"bold"), tags="initial_text")
 
     # Rainbow image for quantum scramble button
-    rainbow = Image.open(os.path.join("cube_images", "rainbow.png"))
+    rainbow = Image.open(os.path.join(IMAGE_DIR, "rainbow.png"))
     rainbow_resize = rainbow.resize((150,60))
     rainbow = ImageTk.PhotoImage(rainbow_resize)
 
     # Clockwise and anticlockwise image to go on top of QuR2 buttons to indicate move and inverse move
-    anti_clock = Image.open(os.path.join("cube_images", "anti_clock.png"))
+    anti_clock = Image.open(os.path.join(IMAGE_DIR, "anti_clock.png"))
     anti_clock_resize = anti_clock.resize((anti_clock.width//10, anti_clock.height//10))
     anti_clock = ImageTk.PhotoImage(anti_clock_resize)
-    clock = Image.open(os.path.join("cube_images", "clock.png"))
+    clock = Image.open(os.path.join(IMAGE_DIR, "clock.png"))
     clock_resize = clock.resize((40,40))
     clock = ImageTk.PhotoImage(clock_resize)
 
@@ -649,8 +651,8 @@ def GUI():
     canvas.create_image(200,250,image=clock)
 
     # On and Off button for the magnitude and angle buttons
-    on = Image.open(os.path.join("cube_images", "toggle_on.png"))
-    off = Image.open(os.path.join("cube_images", "toggle_off.png"))
+    on = Image.open(os.path.join(IMAGE_DIR, "toggle_on.png"))
+    off = Image.open(os.path.join(IMAGE_DIR, "toggle_off.png"))
     on_image = ImageTk.PhotoImage(on.resize((on.width // 16, on.height // 16)))
     off_image = ImageTk.PhotoImage(off.resize((on.width // 16, on.height // 16)))
     canvas.on_image = on_image
