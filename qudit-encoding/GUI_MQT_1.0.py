@@ -1,16 +1,19 @@
 ######################################################################
 # Note:
-# Needs images folder and perm_matrices.py
+# Needs images and perm_matrices_MQT.py
 
 ######################################################################
 
 # Packages
-import pennylane as qml
+from mqt.qudits.compiler.state_compilation.state_preparation import StatePrep
+from mqt.qudits.quantum_circuit import QuantumRegister, QuantumCircuit
+from mqt.qudits.simulation import MQTQuditProvider
+from mqt.qudits.simulation.backends.stochastic_sim import measure_state
 import numpy as np
 import tkinter as tk
 from tkinter import font as tkFont
 from tkinter import messagebox
-import perm_matrices as pm
+import perm_matrices_MQT as pm
 import cmath
 import tkinter.ttk as ttk
 from PIL import Image, ImageTk
@@ -20,19 +23,22 @@ from fractions import Fraction
 import scipy.linalg as spla
 from types import NoneType
 import os
+from pathlib import Path
 
-IMAGE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "images")
-
-qubits = ['w','x','y1','y2','z'] # 5 qubits to represent 24 states: w_2 x_2 y1_2 y2_2 z_2
 state_dict = {
-    "00000": [690, 300],    "00001": [640, 390],    "00100": [860, 390],    "00101": [810, 300],    "00110": [690, 480],    "00111": [810, 480],
-    "01000": [860, 570],    "01001": [810, 660],    "01100": [690, 120],    "01101": [975, 570],    "01110": [525, 210],    "01111": [640, 210],
-    "10000": [525, 570],    "10001": [810, 120],    "10100": [690, 660],    "10101": [640, 570],    "10110": [860, 210],    "10111": [975, 210],
-    "11000": [1025, 300],   "11001": [975, 390],    "11100": [525, 390],    "11101": [475, 300],    "11110": [1025, 480],   "11111": [475, 480],
+    "0000": [690, 300],    "0001": [640, 390],    "0010": [860, 390],    "0011": [810, 300],    "0020": [690, 480],    "0021": [810, 480],
+    "0100": [860, 570],    "0101": [810, 660],    "0110": [690, 120],    "0111": [975, 570],    "0120": [525, 210],    "0121": [640, 210],
+    "1000": [525, 570],    "1001": [810, 120],    "1010": [690, 660],    "1011": [640, 570],    "1020": [860, 210],    "1021": [975, 210],
+    "1100": [1025, 300],   "1101": [975, 390],    "1110": [525, 390],    "1111": [475, 300],    "1120": [1025, 480],   "1121": [475, 480],
 }       # A dictionary to store the positions of the images and the probabilities, vector and polar labels of each state (added later)
+
+basis_states = state_dict.keys()
 
 # GUI window
 window = tk.Tk()
+
+# File handling
+BASE_DIR = Path(__file__).resolve().parent
 
 # Parameters
 scale_v = tk.DoubleVar(window, 1/8) # Initial variable for the scale (used for the step magnitude)
@@ -52,12 +58,20 @@ colour_chose = {"Dark":white, "Light":black} # Colour themes
 v = tk.StringVar(window, "1")
 is_on_angle = False
 is_on_mag = True
+toggle_vis = True
 
 # Initialise these variables to be not on or default
 step_counter = 0
 end_game = "N"
 key_option = tk.StringVar(window,"Classic")
 col_option = tk.StringVar(window,"Dark")
+options_class = tk.IntVar(window,1)
+options_quant = tk.IntVar(window,2)
+options_rep = tk.IntVar(window,3)
+options_count = tk.IntVar(window,4)
+options_prop = tk.IntVar(window,5)
+
+# Karina is lazy
 pi = np.pi
 
 op_sys = os.name # What operating system are you
@@ -97,71 +111,96 @@ else: #op_sys == 'nt' # Everyone else
     style_op = lambda colour_hex: {"font": helv26, "bd": 0, "bg": colour_hex} # Choose what kind of font colour
     space="  " # Space needed
 
+
 # Matrices and logs
 R2_matrix, U2_matrix, F2_matrix = pm.perm_matrix()
-HamR2 = 1j * spla.logm(R2_matrix) # Quantum R2 move
-HamU2 = 1j * spla.logm(U2_matrix) # Quantum U2 move
-HamF2 = 1j * spla.logm(F2_matrix) # Quantum F2 move
-Hamb = 1j * spla.logm(R2_matrix@U2_matrix) # Quantum b move
-HambInv = 1j * spla.logm(U2_matrix@R2_matrix) # Quantum b^-1 move
-Hamh = 1j * spla.logm(R2_matrix@U2_matrix@R2_matrix) # Quantum h move
-Ham2 = 1j * spla.logm(R2_matrix@U2_matrix@R2_matrix@F2_matrix ) # Quantum rurf move (2-cycle)
-Ham3 = 1j * spla.logm(R2_matrix@U2_matrix@F2_matrix@R2_matrix) # Quantum rufr move (3-cycle)
-Ham4 = 1j * spla.logm(R2_matrix@U2_matrix@F2_matrix) # Quantum ruf move (4-cycle)
+P24 = np.identity(24)
+P24[0, 0] = -1
 
-# Creates a custom pennylane gate from the input Hamiltonian.
-class HamG(qml.operation.Operation):
-    num_params = 2
-    num_wires = 5
-    par_domain = "L"
+HamR2 = 1j * spla.logm(R2_matrix)
+HamU2 = 1j * spla.logm(U2_matrix) #(pi/2 + pi ) * (R2_matrix-np.identity(24))
+HamF2 = 1j * spla.logm(F2_matrix) 
+Hamb = 1j * spla.logm(R2_matrix@U2_matrix) #(2*pi*np.sqrt(3)/9 + 2*pi/np.sqrt(3) )*(R2_matrix@U2_matrix-np.linalg.inv(R2_matrix@U2_matrix)) * 1j
+HambInv = 1j * spla.logm(U2_matrix@R2_matrix)
+Hamh = 1j * spla.logm(R2_matrix@U2_matrix@R2_matrix) 
+Ham2 = 1j * spla.logm(R2_matrix@U2_matrix@R2_matrix@F2_matrix ) # Example 1  (2-cycle)   
+Ham3 = 1j * spla.logm(R2_matrix@U2_matrix@F2_matrix@R2_matrix) # Example 2 (3-cycle)
+Ham4 = 1j * spla.logm(R2_matrix@U2_matrix@F2_matrix) # Example 3 (4-cycle)
+Ex5 = (pi/4) *((-R2_matrix@U2_matrix@F2_matrix + np.identity(24) - np.linalg.inv(R2_matrix@U2_matrix@F2_matrix) + R2_matrix@U2_matrix@F2_matrix@R2_matrix@U2_matrix@F2_matrix) + 1j * (R2_matrix@U2_matrix@F2_matrix-np.linalg.inv(R2_matrix@U2_matrix@F2_matrix)))
+Ex6 = (pi/4) *((-R2_matrix@U2_matrix@F2_matrix + 3*np.identity(24) - np.linalg.inv(R2_matrix@U2_matrix@F2_matrix) - R2_matrix@U2_matrix@F2_matrix@R2_matrix@U2_matrix@F2_matrix) + 1j * (R2_matrix@U2_matrix@F2_matrix-np.linalg.inv(R2_matrix@U2_matrix@F2_matrix)))
+Ex7 = (pi/4) *((R2_matrix@U2_matrix@F2_matrix - 3*np.identity(24) + np.linalg.inv(R2_matrix@U2_matrix@F2_matrix) + R2_matrix@U2_matrix@F2_matrix@R2_matrix@U2_matrix@F2_matrix) + 1j * (R2_matrix@U2_matrix@F2_matrix-np.linalg.inv(R2_matrix@U2_matrix@F2_matrix)))
+Ex8 = pi/3 *(2*np.identity(24)-R2_matrix@U2_matrix-R2_matrix@U2_matrix@R2_matrix@U2_matrix-1j*(1/np.sqrt(3))*(R2_matrix@U2_matrix-R2_matrix@U2_matrix@R2_matrix@U2_matrix))
+Ex9 = pi/3 *(-2*np.identity(24)+R2_matrix@U2_matrix+R2_matrix@U2_matrix@R2_matrix@U2_matrix-1j*(1/np.sqrt(3))*(R2_matrix@U2_matrix-R2_matrix@U2_matrix@R2_matrix@U2_matrix))
+HamP = 1j * spla.logm(P24)
 
-    @staticmethod
-    def compute_matrix(*params):
-        s = params[0]
-        Ham = params[1]
-        G = spla.expm(-1j*s*Ham)
-        return G
-    
-# Pennylane quantum 'device'. There are many options in pennylane but 'default.qubit' is fine. qubits = ['w','x','y1','y2','z']
-# 'default.qubit': a simple state simulator of qubit-based quantum circuit architectures - pennylane
-dev = qml.device('default.qubit', wires=qubits)
+# Create quantum circuit (starts with 0000)
+def create_new_circuit():
+    circuit = QuantumCircuit()
+    qube = QuantumRegister("qube", 4, [2,2,3,2])
+    circuit.append(qube)
 
-# Uses a decorator: This decorator converts a Python function containing PennyLane quantum operations to a QNode circuit that will run on a quantum device - pennylane
+    return circuit, qube
+
+circuit, qube = create_new_circuit()
+provider = MQTQuditProvider()
+backend = provider.get_backend("tnsim")
+
 # This general circuit runs any move depending on the time step (default 1/8 for quantum and 1 for classical), the Hamiltonian, and the qubits (always the same)
-# Returns the state: quantum state in the computational basis (32x1 array) and probabilities (32x1 array). 
-@qml.qnode(dev)
-def general_circuit(Initial_State, time_step, Ham):
-    qml.StatePrep(Initial_State, wires = qubits)
-    HamG(time_step, Ham, wires = qubits)
-    return qml.state(), qml.probs()
+# Returns the state: quantum state in the computational basis (24x1 array) and probabilities (24x1 array). 
+def general_circuit(time_step, Ham):
 
-@qml.qnode(dev)
-def reset_circuit(Initial_State): # A circuit that only has StatePrep for resetting. StatePrep: Prepare subsystems using a state vector in the computational basis
-    qml.StatePrep(Initial_State, wires = qubits)
-    return qml.state(), qml.probs() # state and probs returns e.g. [0,0,0,0,0.707,0.707,0,0,...,0] and [0,0,0,0,0,0.5,0.5,0,0,...,0].
+    U = spla.expm(-1j*time_step*Ham)
 
-dev = qml.device('default.qubit', wires=qubits, shots=1) #  Change device to include shots. This is required to do qml.sample(). qml.sample() is required to return qml.measure().
-@qml.qnode(dev)
-def measure_cube(Initial_State):
-    qml.StatePrep(Initial_State, wires = qubits)
-    return (qml.sample(wires=qubits), qml.probs()) #   sample returns e.g. [0,1,0,0,1]
+    circuit.cu_multi([qube[0],qube[1],qube[2],qube[3]], U)
+
+    state = circuit.simulate()
+    probs = np.abs(state)**2
+
+    return state[0], probs[0]
+
+def reset_circuit(): # A circuit that only has StatePrep for resetting. StatePrep: Prepare subsystems using a state vector in the computational basis
+    global circuit, qube
+    circuit,qube = create_new_circuit()
+
+    state = circuit.simulate()
+    probs = np.abs(state)**2
+
+    return state[0], probs[0] # state and probs returns e.g. [0,0,0,0,0.707,0.707,0,0,...,0] and [0,0,0,0,0,0.5,0.5,0,0,...,0].
+
+def measure_cube():
+    global circuit, qube
+    job = backend.run(circuit)
+    result = job.result()
+
+    state = result.get_state_vector()
+    measurement = measure_state(state) # Gives integer of result, e.g. 0=0000, 1=0001, 2=0010, ..., 23=1121
+
+    state = [0] * measurement + [1 + 0j] + [0] * (23-measurement) #e.g. [0] * 1 + [1] + [0] * 22 = [0,1,0,0,0,0,0,0,0,0,...,0] (integer tells us where the 1 is)
+    probs = np.abs(state)**2
+
+    circuit,qube = create_new_circuit()
+    prep = StatePrep(circuit, state, approx=False)
+    circuit = prep.compile_state()
+
+    return state, probs 
 
 # The main function - this is run every time a button is pressed 
 # runs the move -> gets final state and probabilities -> under each bit value stores the vector (from state), probabilities, and polar (converts from state)
 # -> calculates transparency (255 if magnitude is off) and places circles representing polar angle (if angle is on) -> place background Nauru graph
 # -> place cube images with certain transparency -> place labels under cubes -> end game (if conditions meet)
-def main(Ham=None, measure_option="N", time_step=1):
-    global initial_state, current_image, state_dict, image_refs, background_image, step_counter, end_game # yes I know so many globals
+def main(Ham=None, time_step=1):
+    global current_image, state_dict, image_refs, background_image, step_counter, end_game # yes I know so many globals
 
     # Skips if just want to run image update not run another move 
+
     if type(Ham) != NoneType: 
         try: # For classical and quantum moves
-            result, probs = general_circuit(initial_state, time_step, Ham)
+            result, probs = general_circuit(time_step, Ham)
             step_counter += abs(time_step) # Absolute because you can have negative time steps
 
         except: # For measure and reset circuits
             try:
-                result, probs = Ham(initial_state)
+                result, probs = Ham()
 
             except Exception as e: # When that stupid bug pops up :(
                 print(e)
@@ -170,26 +209,13 @@ def main(Ham=None, measure_option="N", time_step=1):
 
         label_list[1].config(text="Number of moves: "+str(sf.round(step_counter, decimals=2))) # Update number of steps
 
-        if measure_option == "Y": # If it was measure_circuit convert from binary to 32x1 list
-            result_temp = "".join(map(str,result)) #e.g [0,0,0,0,1] -> ['0','0','0','0','1'] -> '00001'
-            result_temp = int(result_temp,2) #e.g. '00001' -> 1   (input is base 2, output is integer)
-            result = [0] * result_temp + [1 + 0j] + [0] * (31-result_temp) #e.g. [0] * 1 + [1] + [0] * 30 = [0,1,0,0,0,0,0,0,0,0,...,0] (integer tells us where the 1 is)
+        for basis_state,state,prob in zip(basis_states,result,probs): 
 
-        for index,state in enumerate(result):
-            state_polar = cmath.polar(state)
+            state_pol = cmath.polar(state)
 
-            try:
-                state_dict[str(bin(index)[2:].zfill(5))][2] = state_polar # Store polar values in dictionary (r,theta)
-
-            except:
-                continue
-        
-            else:
-                state_dict[str(bin(index)[2:].zfill(5))][3] = probs[index] # Store probabilities in dictionary
-                state_dict[str(bin(index)[2:].zfill(5))][4] = state # Store vector values in dictionary
-    
-    else:
-        result = initial_state
+            state_dict[basis_state][2] = state_pol # Store polar values in dictionary (r,theta)
+            state_dict[basis_state][3] = prob # Store probabilities in dictionary
+            state_dict[basis_state][4] = state # Store vector values in dictionary
 
     # Delete previous images 
     image_refs = []
@@ -200,37 +226,39 @@ def main(Ham=None, measure_option="N", time_step=1):
     canvas.delete("congrats")
 
     # Insert/update angle circles (if on) and/or calculate transparency depending on magnitude (this uses the polar form)
-    for cube_state in state_dict:
-        if state_dict[cube_state][3] >= 1e-3: # Percentage has to be greater than 0.1% (0.001 in dictionary) -> aligns with label now
+    for basis_state in basis_states:
+
+        if state_dict[basis_state][3] >= 1e-3: # Percentage has to be greater than 0.1% (0.001 in dictionary) -> aligns with label now
             if is_on_mag == True:
-                transparency = int(255 * state_dict[cube_state][2][0]) # polar (radius) ∈ [0,1] ----> polar (radius) x 255 ∈ [0,255] (this works with colour/transparency)
+                transparency = int(255 * state_dict[basis_state][2][0]) # polar (radius) ∈ [0,1] ----> polar (radius) x 255 ∈ [0,255] (this works with colour/transparency)
             else:
                 transparency = 255 # Leave full transparency 
 
             if is_on_angle == True:
-                hue = (state_dict[cube_state][2][1] / (2*np.pi)) % 1.0 # polar (angle) ∈ (-pi,pi] ----> ∈ (-0.5,0.5] ----> hue ∈ [0,1] 
+                hue = (state_dict[basis_state][2][1] / (2*np.pi)) % 1.0 # polar (angle) ∈ (-pi,pi] ----> ∈ (-0.5,0.5] ----> hue ∈ [0,1] 
                 
                 if col_option.get()== "Dark": lum = 0.5/255*transparency # Make circles as transparent as cubes
                 else: lum = 1-0.5/255*transparency
 
                 if lum > 0.025: # If too dark it's just a black circle which looks terrible
-                    canvas.create_oval(state_dict[cube_state][0]-50, state_dict[cube_state][1]-50,state_dict[cube_state][0]+50, 
-                                    state_dict[cube_state][1]+50, fill=colour.Color(hue=hue, saturation=1, luminance = lum),outline="", tags="circle")
+                    canvas.create_oval(state_dict[basis_state][0]-50, state_dict[basis_state][1]-50,state_dict[basis_state][0]+50, 
+                                    state_dict[basis_state][1]+50, fill=colour.Color(hue=hue, saturation=1, luminance = lum),outline="", tags="circle")
 
-    image_path = os.path.join(IMAGE_DIR, "honeycomb_connections_cmy.png") # os.path.join depends on the operating system
+    image_path = BASE_DIR/"images"/"honeycomb_connections_cmy.png" # os.path.join depends on the operating system
     background_image = tk.PhotoImage(file=image_path)
     canvas.create_image(750, 400, image=background_image, tags = "Nauru_graph") # Nauru graph
 
     # Place cube images in locations
-    for cube_state in state_dict:
-        if state_dict[cube_state][3] >= 1e-3: # Percentage has to be greater than 0.1% (0.001 in dictionary) -> aligns with label now
+    
+    for basis_state in basis_states:
+        if state_dict[basis_state][3] >= 1e-3: # Percentage has to be greater than 0.1% (0.001 in dictionary) -> aligns with label now
 
-            im = Image.open(os.path.join(IMAGE_DIR, f"{cube_state}.png"))
+            im = Image.open(BASE_DIR/"images"/f"{basis_state}.png")
             im_resize = im.resize((im.width // 5, im.height // 5)) # This reduces the size without losing quality yay
             alpha_pixels = list(im_resize.getdata()) # Pixels
 
             if is_on_mag == True:
-                transparency = int(255 * state_dict[cube_state][2][0]) # polar (magnitude) ∈ [0,1] ----> polar (radius) x 255 ∈ [0,255] (this works with colour/transparency)
+                transparency = int(255 * state_dict[basis_state][2][0]) # polar (magnitude) ∈ [0,1] ----> polar (radius) x 255 ∈ [0,255] (this works with colour/transparency)
             else:
                 transparency = 255 # Leave full transparency 
             
@@ -242,15 +270,14 @@ def main(Ham=None, measure_option="N", time_step=1):
                     
             im_resize.putdata(alpha_pixels) # Update pixels
             img = ImageTk.PhotoImage(im_resize)
-            canvas.create_image(state_dict[cube_state][0],state_dict[cube_state][1],image=img) # Put image in!
+            canvas.create_image(state_dict[basis_state][0],state_dict[basis_state][1],image=img) # Put image in!
             image_refs.append(img) # Solution to trash collecting bug (keep images as a variable or else it will forget it)
 
     # Place labelling on each cube
     rep_change()
-    initial_state = result # Update the initial state to the current state
 
     # End game sequence
-    if initial_state[0] == 1+0j and end_game=="Y":
+    if result[0] == 1+0j and end_game=="Y":
         canvas.create_text(700, 400,text="CONGRATULATIONS", font=helv28, fill=colour_chose[col_option.get()], tags="congrats")
         canvas.delete("Nauru_graph")
 
@@ -258,10 +285,9 @@ def main(Ham=None, measure_option="N", time_step=1):
         for button in button_list+radbuttons:
             button.config(state=tk.DISABLED)
 
-        canvas.itemconfigure(toggle_button_angle, state = tk.DISABLED)
-        canvas.itemconfigure(toggle_button_mag, state = tk.DISABLED)
-
-        end_game = "N"
+        if toggle_vis == True:
+            canvas.itemconfigure(toggle_button_angle, state = tk.DISABLED)
+            canvas.itemconfigure(toggle_button_mag, state = tk.DISABLED)
 
         # Only when user presses return does the keys regain their functions
         def reset(event):
@@ -320,7 +346,12 @@ def on_key_press(event):
     elif event.keysym=='H':
         main(Hamh,time_step=-time_step)
 
-    # Extra moves (2-, 3-, and 4-cycle)
+    elif event.keysym=='p' and event.state == 0:
+        main(HamP,time_step=time_step)
+    elif event.keysym=='P':
+        main(HamP,time_step=-time_step)
+
+    #### Extra moves (2-, 3-, and 4-cycle)
     elif event.keysym=='2':
         main(Ham2,time_step=time_step)
     elif event.keysym=='3':
@@ -328,27 +359,55 @@ def on_key_press(event):
     elif event.keysym=='4':
         main(Ham4,time_step=time_step)
 
-    # Tools
+    #### Extra extra moves
+    elif event.keysym=='at':
+        main(Ham2,time_step=-time_step)
+    elif event.keysym=='dollar':
+        main(Ham4,time_step=-time_step)
+    elif event.keysym=='5':
+        main(Ex5,time_step=time_step)
+    elif event.keysym=='percent':
+        main(Ex5,time_step=-time_step)
+    elif event.keysym=='6':
+        main(Ex6,time_step=time_step)
+    elif event.keysym=='asciicircum':
+        main(Ex6,time_step=-time_step)
+    elif event.keysym=='7':
+        main(Ex7,time_step=time_step)
+    elif event.keysym=='ampersand':
+        main(Ex7,time_step=-time_step)
+    elif event.keysym=='8':
+        main(Ex8,time_step=time_step)
+    elif event.keysym=='asterisk':
+        main(Ex8,time_step=-time_step)
+    elif event.keysym=='9':
+        main(Ex9,time_step=time_step)
+    elif event.keysym=='parenleft':
+        main(Ex9,time_step=-time_step)
+
     elif event.keysym=='Return':
         reset_cube()
     elif event.keysym=='space':
-        main(measure_cube, "Y")
+        main(measure_cube)
 
-# Function to reset the game to 100% solved state (00000)
+# Function to reset the game to 100% solved state (0000)
 def reset_cube():
-    global initial_state, step_counter, end_game
-
-    initial_state = [1 + 0j] + [0] * 31 
+    global step_counter, end_game
 
     step_counter = 0
-    end_game = "N"
-    window.bind('<Key>', on_key_press) # This is here if you win the game (to unlock the key functions)
 
-    # Again only when you win the game (to unlock the frozen buttons)
-    for button in button_list+radbuttons:
-        button.config(state=tk.NORMAL) 
-    canvas.itemconfigure(toggle_button_angle, state = tk.NORMAL)
-    canvas.itemconfigure(toggle_button_mag, state = tk.NORMAL)
+    if end_game == "Y":
+        window.bind('<Key>', on_key_press) # This is here if you win the game (to unlock the key functions)
+
+        # Again only when you win the game (to unlock the frozen buttons)
+        for button in button_list+radbuttons:
+            button.config(state=tk.NORMAL)
+        
+        if toggle_vis == True:
+            canvas.itemconfigure(toggle_button_angle, state = tk.NORMAL)
+            canvas.itemconfigure(toggle_button_mag, state = tk.NORMAL)
+
+        end_game = "N"
 
     main(reset_circuit) # To update the images and labels
 
@@ -359,33 +418,33 @@ def rep_change():
     var = v.get() # var is the representation type chosen from the radiobuttons
     fill_colour = colour_chose[col_option.get()] # What font colour is the labels?
 
-    for cube_state in state_dict:
-        if state_dict[cube_state][2][0] != 0 or state_dict[cube_state][2][1] != 0:
+    for basis_state in basis_states:
+        if state_dict[basis_state][2][0] != 0 or state_dict[basis_state][2][1] != 0:
             if var == "1": # Percentage
-                label = sf.round(state_dict[cube_state][3]*100,sigfigs=3)
+                label = sf.round(state_dict[basis_state][3]*100,sigfigs=3)
                 if 0.1 > label >= 0.001: label = "< 0.1" # Only show percentages >0.001% and between 0.001 and 0.1 just label it <0.1%
                 elif label == 100: label = 100 # Show 100.0% as 100%
 
                 if label == "< 0.1" or label > 0.1:
-                    canvas.create_text(state_dict[cube_state][0],(state_dict[cube_state][1]+60),
+                    canvas.create_text(state_dict[basis_state][0],(state_dict[basis_state][1]+60),
                                         text=str(label)+"%", 
                                         fill=fill_colour, font=math12, tags="text") # Create label (python labels this text)
                 
             elif var == "2": # Vector
-                label_vec = np.real_if_close((state_dict[cube_state][4])) # Eliminates super small imaginary values
+                label_vec = np.real_if_close((state_dict[basis_state][4])) # Eliminates super small imaginary values
                 if abs(label_vec.real) >= 0.01 or abs(label_vec.imag) >= 0.01: # Only show if either the real or imaginary values are greater than 0.01
                     text = "{:.2f}".format(label_vec) # Round to 2 decimal points
                     if abs(label_vec.real) < 0.01:
                         text = "{:.2f}".format(label_vec.imag) + "i" # If just imaginary get rid of 0.00 + imag -> imag
-                    canvas.create_text(state_dict[cube_state][0],(state_dict[cube_state][1]+60),
+                    canvas.create_text(state_dict[basis_state][0],(state_dict[basis_state][1]+60),
                                         text=(text.replace("(", "").replace(")", "").replace("j", "i")), 
                                         fill=fill_colour, font=math12, tags="text") # Create label (python labels this text)
                 
             elif var == "3": # Polar
-                label1 = "%.2f" % state_dict[cube_state][2][0] # Radius e.g. 0.3444 -> "0.34"
-                label2 = Fraction(np.round(state_dict[cube_state][2][1]/pi,15)).limit_denominator() # Convert Angle to fraction and limit the denominator if the time step stuffs up
-                if abs(state_dict[cube_state][2][0]) >= 0.01:
-                    canvas.create_text(state_dict[cube_state][0],(state_dict[cube_state][1]+60),
+                label1 = "%.2f" % state_dict[basis_state][2][0] # Radius e.g. 0.3444 -> "0.34"
+                label2 = Fraction(np.round(state_dict[basis_state][2][1]/pi,15)).limit_denominator() # Convert Angle to fraction and limit the denominator if the time step stuffs up
+                if abs(state_dict[basis_state][2][0]) >= 0.01:
+                    canvas.create_text(state_dict[basis_state][0],(state_dict[basis_state][1]+60),
                                         text=(f"{label1}exp(πi({label2}))"), #(label1+"exp("+str(label2)+" πi)")
                                         fill=fill_colour, font=math12, tags="text") # Create label (python labels this text)
 
@@ -443,16 +502,15 @@ def toggle_mag(event):
 
 # Function to scramble the board with random quantum moves depending on the time step
 def QuScramble():
-    global initial_state, step_counter, end_game
+    global step_counter, end_game
 
-    time_step = scale_v.get() # Get the current time step
+    time_step = scale_v.get()
 
     choice = {"R2":HamR2, "U2":HamU2, "F2":HamF2} # There are three choice for the three moves
 
     for _ in range(100):
         QuMove = np.random.choice(["R2", "U2", "F2"]) # Choose any of the three moves (this is a string cause it doesn't work with matrices)
-        result = general_circuit(initial_state, time_step, choice[QuMove])[0] # Access only the result with [0] (else you have to do result,probs = )
-        initial_state = result
+        result = general_circuit(time_step, choice[QuMove])[0] # Access only the result with [0] (else you have to do result,probs = )
     
     end_game = "Y" # end_game is global as many functions will be called before the game will end
     step_counter -= time_step
@@ -478,7 +536,7 @@ def pop_up():
     elif option == "Efficient": # Alternative. Press keys right, up and left.
         image = "keyboard_shortcuts_alt.png"
 
-    popup_path = Image.open(os.path.join(IMAGE_DIR, image))
+    popup_path = Image.open(BASE_DIR/"images"/image)
     popup_path.thumbnail((960,540)) # Similar to .resize()
     popup_image = ImageTk.PhotoImage(popup_path)
 
@@ -546,28 +604,82 @@ def preferences(pref_type):
     pref_combo.pack(side=tk.TOP, pady=20) # Use pack because it stacks the widgets nicely but need some padding (pady)
     exit_button.pack(side=tk.BOTTOM, pady=10)
 
+def display_options(change_display):
+    global toggle_vis
+
+    if change_display == 1:
+        button_list[0].place(x=50, y=250)
+        button_list[1].place(x=50, y=350)
+        button_list[2].place(x=50, y=450)
+    elif change_display == 10:
+        for i in range(3):
+            button_list[i].place_forget()
+    
+    elif change_display == 2:
+        button_list[3].place(x=268, y=250)
+        button_list[6].place(x=200, y=250)
+        button_list[4].place(x=268, y=350)
+        button_list[7].place(x=200, y=350)
+        button_list[5].place(x=268, y=450)
+        button_list[8].place(x=200, y=450)
+        button_list[9].place(x=105, y=550)
+        button_list[10].place(x=400, y=675)
+        label_list[4].place(x=215, y=180)
+        canvas.itemconfigure(clock,state='normal')
+        canvas.itemconfigure(anti_clock,state='normal')
+    elif change_display ==  20:
+        for i in range(3,11):
+            button_list[i].place_forget()
+        label_list[4].place_forget()
+        canvas.itemconfigure(clock,state='hidden')
+        canvas.itemconfigure(anti_clock,state='hidden')
+
+    elif change_display == 3:
+        difference=0
+        for i in range(4):
+            radbuttons[i].place(x=1150, y=(250+difference))
+            difference += 100
+    elif change_display == 30:
+        for i in range(4):
+            radbuttons[i].place_forget()
+
+    elif change_display == 4:
+        label_list[1].place(x=50, y=70)
+    elif change_display == 40:
+        label_list[1].place_forget()
+
+    elif change_display == 5:
+        canvas.itemconfigure(toggle_button_angle, state='normal')
+        canvas.itemconfigure(toggle_button_mag, state='normal')
+        canvas.itemconfigure(label_list[2], state='normal')
+        canvas.itemconfigure(label_list[3], state='normal')
+        toggle_vis = True
+    elif change_display == 50:
+        canvas.itemconfigure(toggle_button_angle, state='hidden')
+        canvas.itemconfigure(toggle_button_mag, state='hidden')
+        canvas.itemconfigure(label_list[2], state='hidden')
+        canvas.itemconfigure(label_list[3], state='hidden')
+        toggle_vis = False
+        
+    
+
 # This is the GUI function and is the first to be called
 def GUI():
-    global initial_state, current_image, canvas, toggle_button_angle, toggle_button_mag, label_list, radbuttons, button_list
+    global current_image, canvas, toggle_button_angle, toggle_button_mag,label_list, radbuttons, button_list, clock, anti_clock
 
 
     ###########  Initialisation  ##############
 
-    initial_state = [1 + 0j] + [0] * 31 # This starts the cube in the solved state
+    initial_state = [1 + 0j] + [0] * 23 # This starts the cube in the solved state
 
     # Add three extra items in the cube dictionary for the polar,percentage,vector. One dictionary item is now [posx,posy,(radius,angle),percentage,vector]
-    for index,state in enumerate(initial_state):
+    for basis_state,state in zip(basis_states,initial_state):
+
         state_pol = cmath.polar(state)
 
-        try: # Some states can't be accessed so try all binary numbers from 0 to 31
-            state_dict[str(bin(index)[2:].zfill(5))].append(state_pol) # Polar
-
-        except: # Skip if not available
-            continue
-
-        else:
-            state_dict[str(bin(index)[2:].zfill(5))].append(np.real(state)) # Percentage
-            state_dict[str(bin(index)[2:].zfill(5))].append(state) # Vector
+        state_dict[basis_state].append(state_pol) # Polar
+        state_dict[basis_state].append(np.real(state)) # Percentage
+        state_dict[basis_state].append(state) # Vector
 
     ###########################################
 
@@ -585,8 +697,17 @@ def GUI():
     # Create a menu bar with File and Help. File has a sub menu with Preferences and Exit. Preferences has a sub menu Options and Accessibility. Help has a sub menu with just Keyboard Shortcuts.
     # File              Help
     # -> Preferences    -> Keyboard Shortcuts
-    #    -> Options     
-    #    -> Accessibility
+    #    -> Key Options
+    #    -> Colour Options     
+    # -> Display
+    #    -> Buttons
+    #        -> Classical
+    #            -> R2  -> U2  -> F2
+    #        -> Quantum
+    #            -> QuR2  -> QuU2  -> QuF2
+    #        -> Other
+    #            -> Scramble  -> Reset  -> Measure
+    #    -> Label
     # -> Exit           
     menubar = tk.Menu(window) 
     window.config(menu=menubar)
@@ -597,12 +718,19 @@ def GUI():
     sub_menu.add_command(label='Key Options', command=lambda: preferences("options")) # Use lambda to specify a parameter in a function
     sub_menu.add_command(label='Colour Options', command=lambda: preferences("colour_change"))
 
+    display_menu = tk.Menu(file_menu, tearoff=False)
+    display_menu.add_checkbutton(label="Classical", onvalue=1, offvalue=10, variable=options_class, command=lambda:display_options(options_class.get()))
+    display_menu.add_checkbutton(label="Quantum", onvalue=2, offvalue=20, variable=options_quant, command=lambda:display_options(options_quant.get()))
+    display_menu.add_checkbutton(label="Representations", onvalue=3, offvalue=30, variable=options_rep, command=lambda:display_options(options_rep.get()))
+    display_menu.add_checkbutton(label="Move Counter", onvalue=4, offvalue=40, variable=options_count, command=lambda:display_options(options_count.get()))
+    display_menu.add_checkbutton(label="State Properties", onvalue=5, offvalue=50, variable=options_prop, command=lambda:display_options(options_prop.get()))
+
     file_menu.add_cascade(label="Preferences", menu=sub_menu)
+    file_menu.add_cascade(label="Display", menu=display_menu)
     file_menu.add_separator()
     file_menu.add_command(label="Exit", command=window.destroy)
     menubar.add_cascade(label="File", menu=file_menu)
 
-    # help_menu.add_command(label="About")
     help_menu.add_command(label="Keyboard Shortcuts",command=pop_up)
     menubar.add_cascade(label="Help", menu=help_menu)
 
@@ -621,44 +749,43 @@ def GUI():
     )
 
     # Nauru graph image
-    image_path = os.path.join(IMAGE_DIR, "honeycomb_connections_cmy.png")
+    image_path = BASE_DIR/"images"/"honeycomb_connections_cmy.png"
+    
     background_image = tk.PhotoImage(file=image_path)
     canvas.create_image(750, 400, image=background_image, tags="Nauru_graph")
 
     # Solved state cube image
-    im = Image.open(os.path.join(IMAGE_DIR, "00000.png"))
+    im = Image.open(BASE_DIR/"images"/"0000.png")
     im_resize = im.resize((im.width // 5, im.height // 5))
     current_image = ImageTk.PhotoImage(im_resize)
-    canvas.create_image(state_dict["00000"][0],state_dict["00000"][1],image=current_image, tags="current_image")
+    canvas.create_image(state_dict["0000"][0],state_dict["0000"][1],image=current_image, tags="current_image")
     
     # Cube label
-    canvas.create_text(state_dict["00000"][0],(state_dict["00000"][1]+60), text="100%", fill="white", font=("Cambria Math",12,"bold"), tags="initial_text")
+    canvas.create_text(state_dict["0000"][0],(state_dict["0000"][1]+60), text="100%", fill="white", font=("Cambria Math",12,"bold"), tags="initial_text")
 
     # Rainbow image for quantum scramble button
-    rainbow = Image.open(os.path.join(IMAGE_DIR, "rainbow.png"))
+    rainbow = Image.open(BASE_DIR/"images"/"rainbow.png")
     rainbow_resize = rainbow.resize((150,60))
     rainbow = ImageTk.PhotoImage(rainbow_resize)
 
     # Clockwise and anticlockwise image to go on top of QuR2 buttons to indicate move and inverse move
-    anti_clock = Image.open(os.path.join(IMAGE_DIR, "anti_clock.png"))
+    anti_clock = Image.open(BASE_DIR/"images"/"anti_clock.png")
     anti_clock_resize = anti_clock.resize((anti_clock.width//10, anti_clock.height//10))
-    anti_clock = ImageTk.PhotoImage(anti_clock_resize)
-    clock = Image.open(os.path.join(IMAGE_DIR, "clock.png"))
+    canvas.anti_clock = ImageTk.PhotoImage(anti_clock_resize)
+    clock = Image.open(BASE_DIR/"images"/"clock.png")
     clock_resize = clock.resize((40,40))
-    clock = ImageTk.PhotoImage(clock_resize)
+    canvas.clock = ImageTk.PhotoImage(clock_resize)
 
-    canvas.create_image(330,250,image=anti_clock)
-    canvas.create_image(200,250,image=clock)
+    anti_clock = canvas.create_image(330,250,image=canvas.anti_clock)
+    clock = canvas.create_image(200,250,image=canvas.clock)
 
     # On and Off button for the magnitude and angle buttons
-    on = Image.open(os.path.join(IMAGE_DIR, "toggle_on.png"))
-    off = Image.open(os.path.join(IMAGE_DIR, "toggle_off.png"))
-    on_image = ImageTk.PhotoImage(on.resize((on.width // 16, on.height // 16)))
-    off_image = ImageTk.PhotoImage(off.resize((on.width // 16, on.height // 16)))
-    canvas.on_image = on_image
-    canvas.off_image = off_image
-    toggle_button_angle = canvas.create_image(1210, 650, image = off_image)
-    toggle_button_mag = canvas.create_image(1210, 700, image = on_image)
+    on = Image.open(BASE_DIR/"images"/"toggle_on.png")
+    off = Image.open(BASE_DIR/"images"/"toggle_off.png")
+    canvas.on_image = ImageTk.PhotoImage(on.resize((on.width // 16, on.height // 16)))
+    canvas.off_image = ImageTk.PhotoImage(off.resize((on.width // 16, on.height // 16)))
+    toggle_button_angle = canvas.create_image(1210, 650, image = canvas.off_image)
+    toggle_button_mag = canvas.create_image(1210, 700, image = canvas.on_image)
 
     # All the buttons with various properties. tk_lib is tk for windows and ttk for mac.
     R2_button = tk_lib.Button(window, 
@@ -740,7 +867,7 @@ def GUI():
                     bd = 0,
                     bg = "white",
                     cursor="target",
-                    command=lambda: main(measure_cube, "Y"))
+                    command=lambda: main(measure_cube))
     
     Qu_scramble_button = tk.Button(window, 
                     image = rainbow,
@@ -766,12 +893,14 @@ def GUI():
                     bg = "black", fg="white",
                     highlightthickness=0) # Spits out decimals even though the resolution is fractions.
 
+    
     canvas.tag_bind(toggle_button_angle,"<Button-1>", toggle_angle) # Bind the button to the function toggle_angle
     canvas.tag_bind(toggle_button_mag,"<Button-1>", toggle_mag) # Bind the button to the function toggle_magnitude. Uses tag_bind because these are actually images not buttons
-    angle = canvas.create_text(1125,650, text="Angle", font=("Helvetica",12,"bold"), fill="white") # Angle text
-    mag = canvas.create_text(1108,700, text="Magnitude", font=("Helvetica",12,"bold"), fill="white") # Magnitude text
+    angle = canvas.create_text(1125,650, text="Phase", font=("Helvetica",12,"bold"), fill="white") # Angle text
+    mag = canvas.create_text(1108,700, text="Amplitude", font=("Helvetica",12,"bold"), fill="white") # Magnitude text
 
     # Place all the buttons and scale with specified x and y locations.
+    
     label1.place(x=430,y=10)
     label2.place(x=50, y=70)
     R2_button.place(x=50, y=250)
@@ -801,6 +930,7 @@ def GUI():
     set_mousewheel(widget=Inv_Qu_R2_button)
     set_mousewheel(widget=Inv_Qu_U2_button)
     set_mousewheel(widget=Inv_Qu_F2_button)
+    
 
     difference = 0 # Set 0 for the for loop
     button_list = [R2_button, U2_button, F2_button, Qu_R2_button, Qu_U2_button, Qu_F2_button,

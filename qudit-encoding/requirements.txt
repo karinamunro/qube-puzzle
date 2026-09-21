@@ -1,0 +1,9 @@
+# Direct dependencies, matching the existing Python 3.11.9 environment.
+# pip installs the dependencies required by these packages automatically.
+mqt.qudits==0.4.0
+numpy==2.3.2
+scipy==1.16.1
+sympy==1.14.0
+pillow==11.3.0
+colour==0.1.5
+sigfig==1.3.19

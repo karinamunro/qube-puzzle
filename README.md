@@ -7,9 +7,9 @@ Code for Karina Munro's 2025 Honours thesis at RMIT University.
 | Folder | Contents | Status |
 | --- | --- | --- |
 | [Qubit encoding](qubit-encoding/) | Existing qubit program, dependencies, images, and instructions | Available |
-| [Qudit encoding](qudit-encoding/) | Future qudit implementation | To be added |
+| [Qudit encoding](qudit-encoding/) | MQT qudit program, dependencies, images, and instructions | Available |
 | [Quick start](quick-start/) | Click-to-start versions of the program | Files to be added |
 
-To run the current program, follow the [qubit installation and game instructions](qubit-encoding/README.md).
+Follow the [qubit instructions](qubit-encoding/README.md) or the [qudit instructions](qudit-encoding/README.md) to run your chosen version.
 
 The repository-wide license is in [LICENSE](LICENSE).
