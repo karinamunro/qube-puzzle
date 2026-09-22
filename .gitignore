@@ -1,9 +1,0 @@
-# Python bytecode and local virtual environments
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-
-# Operating-system metadata
-.DS_Store
-Thumbs.db
