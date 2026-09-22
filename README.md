@@ -2,11 +2,12 @@
 
 Welcome!
 
-Code for Karina Munro's 2025 Honours thesis at RMIT University.
+Code for Karina Munro's 2025 Honours thesis at RMIT University and 2026 research paper (TBA).
+
 
 Contact:
-Karina Munro
-karina.munro@rmit.edu.au
+- Karina Munro
+- karina.munro@rmit.edu.au
 
 ## Choose a version
 
