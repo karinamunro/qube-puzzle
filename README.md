@@ -1,12 +1,18 @@
 # The Qube Puzzle
 
+Welcome!
+
 Code for Karina Munro's 2025 Honours thesis at RMIT University.
+
+Contact:
+Karina Munro
+karina.munro@rmit.edu.au
 
 ## Choose a version
 
 | Folder | Contents | Status |
 | --- | --- | --- |
-| [Qubit encoding](qubit-encoding/) | Existing qubit program, dependencies, images, and instructions | Available |
+| [Qubit encoding](qubit-encoding/) | PennyLane qubit program, dependencies, images, and instructions | Available |
 | [Qudit encoding](qudit-encoding/) | MQT qudit program, dependencies, images, and instructions | Available |
 | [Quick start](quick-start/) | Click-to-start versions of the program | Available |
 
