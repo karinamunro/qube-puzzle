@@ -17,7 +17,6 @@ Contact:
 | [Qudit encoding](qudit-encoding/) | MQT qudit program, dependencies, images, and instructions | Available |
 | [Quick start](quick-start/) | Windows executables for both encodings | Available |
 | [Classical transition checks](verification/classical_transition_check/) | Verify both encodings against the 24-state classical rules and Nauru graph | Available |
-| [Universality algebra checks](verification/universality_check/) | Exact commutator decompositions, dimension, closure, and tables | Available |
 
 ## Quick start on Windows
 
