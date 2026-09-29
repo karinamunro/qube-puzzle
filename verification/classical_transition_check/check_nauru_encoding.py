@@ -1,12 +1,18 @@
 """Check both existing r,u,f implementations on all 24 classical states.
 
-Run from this directory:
-    .venv\Scripts\python.exe check_nauru_encoding.py
-    .venv\Scripts\python.exe check_nauru_encoding.py --verbose --csv transitions.csv
+Activate your Python environment, then run from verification/classical_transition_check:
+    python -m pip install -r requirements.txt
+    python check_nauru_encoding.py
+    python check_nauru_encoding.py --verbose --csv transitions.csv
 
-Requires numpy, sympy, pennylane and networkx (available in the project venv).
-Expected labelled transitions come from the classical rules in main.tex,
-tab:summary_op_encoding and eq. d_operator_g, independently of the matrices.
+The environment can be located anywhere; it need not be inside this folder.
+Requires numpy, sympy, pennylane and networkx (listed in requirements.txt).
+Expected labelled transitions follow Table I of the accompanying Qube Puzzle
+paper, with the group number g defined in Eq. (20) and the conditional action
+of d given in Eq. (22). These rules are implemented in classical_move() below
+and evaluated separately from the qubit and qudit permutation matrices being
+checked. All rules needed to run this check are included here; no paper source
+files are required.
 An additional unlabelled isomorphism check uses the Nauru graph G(12,5).
 This verifies those rules and graph structure, not an independent physical
 sticker/corner model of the cube. There are 72 directed transitions per
