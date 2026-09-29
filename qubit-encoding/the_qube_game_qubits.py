@@ -242,7 +242,7 @@ def main(Ham=None, measure_option="N", time_step=1):
                     
             im_resize.putdata(alpha_pixels) # Update pixels
             img = ImageTk.PhotoImage(im_resize)
-            canvas.create_image(state_dict[cube_state][0],state_dict[cube_state][1],image=img) # Put image in!
+            canvas.create_image(state_dict[cube_state][0],state_dict[cube_state][1],image=img, tags="current_image") # Put image in!
             image_refs.append(img) # Solution to trash collecting bug (keep images as a variable or else it will forget it)
 
     # Place labelling on each cube
@@ -788,13 +788,13 @@ def GUI():
     Qu_scramble_button.place(x=400, y=675)
     time_step_scale.place(x=215, y=180)
 
-    # This is done to allow for the scrolling
-    Qu_R2_button.command = general_circuit
-    Qu_U2_button.command = general_circuit
-    Qu_F2_button.command = general_circuit
-    Inv_Qu_R2_button.command = general_circuit
-    Inv_Qu_U2_button.command = general_circuit
-    Inv_Qu_F2_button.command = general_circuit
+    # Associate each mouse-wheel target with its move Hamiltonian.
+    Qu_R2_button.command = HamR2
+    Qu_U2_button.command = HamU2
+    Qu_F2_button.command = HamF2
+    Inv_Qu_R2_button.command = HamR2
+    Inv_Qu_U2_button.command = HamU2
+    Inv_Qu_F2_button.command = HamF2
     set_mousewheel(widget=Qu_R2_button)
     set_mousewheel(widget=Qu_U2_button)
     set_mousewheel(widget=Qu_F2_button)

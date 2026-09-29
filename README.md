@@ -33,7 +33,7 @@ For macOS, Linux, or working with the Python code, follow the [qubit instruction
 
 ## Reproduce the verification results
 
-The verification script runs separately from the games and do not need the GUI or image files.
+The verification script runs separately from the games and does not need the GUI or image files.
 
 ### Classical transitions
 
