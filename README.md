@@ -48,6 +48,30 @@ A successful run reports 72/72 transitions for each encoding, passing Nauru grap
 
 ## Playing
 
-Press **Scramble** to begin. Use classical and quantum **R2**, **U2**, and **F2** moves, adjust the quantum step size, then **Measure** to try to reach the solved state marked by the star. Open **Help → Keyboard Shortcuts** for controls.
+To start the game, press the **Scramble** button. The aim of the game is to **Measure** the Qube and collapse the state to the solved state marked by the star ⭐. To increase your chances of solving the Qube, combine the amplitudes by using quantum **R2**, **U2**, and **F2** moves dictated by the **step size** (the sliding bar). Use the classical **R2**, **U2**, and **F2** moves to move the locations of basis states without changing the amplitudes.
+
+Note: Click **Help**&#8594;**Keyboard Shortcuts** for shortcuts on all the functionalities.
+
+The qudit version also retains the supplied MQT program's warning when a measurement cannot be completed.
+
+## Interface guide
+
+The screenshots below show the qubit version to illustrate the shared controls and layout. The qudit version uses four-digit basis-state labels (for example, `0000` and `1121`) for its 2 × 2 × 3 × 2 encoding, instead of the five-bit labels shown in these screenshots.
+
+<img src="qubit-encoding/docs/pennylane_instructions.png" alt="Game controls illustrated using the qubit interface" width="60%">
+
+## Example screens
+
+### Windows
+
+Initial and scrambled views of the shared game interface:
+
+<img src="qubit-encoding/docs/pennylane_initial.png" alt="Initial game view, shown in the qubit version on Windows" width="45.2%"> <img src="qubit-encoding/docs/pennylane_random.png" alt="Scrambled game view, shown in the qubit version on Windows" width="44.7%">
+
+### Mac
+
+These examples show the Python source version on macOS; the downloadable executables run on Windows.
+
+<img src="qubit-encoding/docs/main_game.png" alt="Game view, shown in the qubit version on Mac" width="45%"> <img src="qubit-encoding/docs/scramble_game.png" alt="Scrambled game view, shown in the qubit version on Mac" width="45%">
 
 The repository-wide license is in [LICENSE](LICENSE).

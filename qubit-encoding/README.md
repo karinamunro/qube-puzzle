@@ -16,7 +16,7 @@ Code for Karina Munro's 2025 Honours thesis at RMIT University.
    `pip install -r requirements.txt`
 
 5. Run the game.   
-   `python the_qube_game_thesis.py`
+   `python the_qube_game_qubits.py`
 
 ## Instructions
 To start the game, press the **Scramble** button. The aim of the game is to **Measure** the Qube and collapse the state to the solved state marked by the star ⭐. To increase your chances of solving the Qube, combine the amplitudes by using quantum **R2**, **U2**, and **F2** moves dictated by the **step size** (the sliding bar). Use the classical **R2**, **U2**, and **F2** moves to move the locations of basis states without changing the amplitudes.

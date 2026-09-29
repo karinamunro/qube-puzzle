@@ -21,7 +21,7 @@ Use a separate environment for this version. These dependency versions match the
    ```
 4. Run the game:
    ```sh
-   python GUI_MQT_1.0.py
+   python the_qube_game_qudits.py
    ```
 
 The GUI also requires Tkinter/Tk, normally included with Conda's Python. It is not a pip dependency. If Tkinter is missing, install it with `conda install tk`.
@@ -30,7 +30,7 @@ See the [MQT Qudits installation documentation](https://mqt.readthedocs.io/proje
 
 ## Files
 
-- `GUI_MQT_1.0.py`: game interface and MQT quantum simulation.
+- `the_qube_game_qudits.py`: game interface and MQT quantum simulation.
 - `perm_matrices_MQT.py`: the R2, U2, and F2 permutation matrices.
 - `images/`: basis-state images, backgrounds, and interface graphics.
 - `requirements.txt`: Python dependencies.
