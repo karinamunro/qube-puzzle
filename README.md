@@ -33,7 +33,7 @@ For macOS, Linux, or working with the Python code, follow the [qubit instruction
 
 ## Reproduce the verification results
 
-The verification scripts run separately from the games and do not need the GUI or image files.
+The verification script runs separately from the games and do not need the GUI or image files.
 
 ### Classical transitions
 
@@ -45,20 +45,6 @@ python verification/classical_transition_check/check_nauru_encoding.py
 ```
 
 A successful run reports 72/72 transitions for each encoding, passing Nauru graph checks, and agreement between the restricted qudit and qubit matrices. See the [classical transition README](verification/classical_transition_check/README.md) for individual checks and CSV output.
-
-### Commutator algebra
-
-Requires Python 3.10 or newer; no third-party packages are needed. From the repository root:
-
-```bash
-python verification/universality_check/universality_analysis.py
-python verification/universality_check/universality_table.py
-python -m unittest discover -s verification/universality_check -p "test_*.py"
-```
-
-The analysis finds 12 real linearly independent generators and verifies closure under the implemented appendix relations in the formal group algebra. The [universality README](verification/universality_check/README.md) explains the assumptions, exact decompositions, and output commands. The table uses consecutive basis labels and includes a mapping to the original enumeration.
-
-View the [CSV table](verification/universality_check/universality_table.csv) on GitHub, or download the [HTML table](verification/universality_check/universality_table.html) and open it in a browser for formatted mathematics.
 
 ## Playing
 

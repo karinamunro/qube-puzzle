@@ -4,8 +4,8 @@ Choose the executable for the encoding you want:
 
 | Download | Encoding | Approximate size |
 | --- | --- | --- |
-| [qubits_qube_puzzle.exe](qubits_qube_puzzle.exe) | Qubits, using PennyLane | 77 MB |
-| [qudits_qube_puzzle.exe](qudits_qube_puzzle.exe) | Qudits, using MQT | 90 MB |
+| [qubits_qube_puzzle.exe](qubits_qube_puzzle.exe) | Qubits, using PennyLane | 95 MB |
+| [qudits_qube_puzzle.exe](qudits_qube_puzzle.exe) | Qudits, using MQT | 86 MB |
 
 ## Start the game
 
@@ -23,7 +23,3 @@ These `.exe` files are Windows applications. For macOS or Linux, use the [qubit 
 ## Build and verification notes
 
 The executables are separately packaged builds; editing the Python source or images in this repository does not update them. Rebuild an executable to include source changes.
-
-The source image filenames and references are lowercase. The supplied executables still contain older bundled image names, including uppercase `.PNG` extensions; those packaged assets have not been renamed.
-
-The source versions passed startup and image-path checks on Windows during the 22 September 2026 review, and the qudit circuit checks covered reset, moves and inverses, fractional moves, and measurement. Both executable packages contain Python and game images, but their interactive launch and gameplay have not been fully verified in this review.
