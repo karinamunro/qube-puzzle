@@ -38,12 +38,6 @@ Initial and scrambled views of the shared game interface:
 
 <img src="../qubit-encoding/docs/pennylane_initial.png" alt="Initial game view, shown in the qubit version on Windows" width="45.2%"> <img src="../qubit-encoding/docs/pennylane_random.png" alt="Scrambled game view, shown in the qubit version on Windows" width="44.7%">
 
-### Mac
-
-These examples show the Python source version on macOS; the downloadable executables run on Windows.
-
-<img src="../qubit-encoding/docs/main_game.png" alt="Game view, shown in the qubit version on Mac" width="45%"> <img src="../qubit-encoding/docs/scramble_game.png" alt="Scrambled game view, shown in the qubit version on Mac" width="45%">
-
 ## Other operating systems and source code
 
 These `.exe` files are Windows applications. For macOS or Linux, use the [qubit source instructions](../qubit-encoding/README.md) or [qudit source instructions](../qudit-encoding/README.md).
